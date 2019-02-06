@@ -97,7 +97,6 @@ HRESULT Wmi::init() {
     CoUninitialize();
     return hres;
   }
-
   // Initialised WMI successfully
   return S_OK;
 }

@@ -5,14 +5,27 @@
 // Taken from https://stackoverflow.com/questions/215963/
 // Convert a wide Unicode string to an UTF8 string
 std::string utf8_encode(const std::wstring& wstr) {
-  if (wstr.empty())
-    return std::string();
+  if (wstr.empty()) return std::string();
+
   int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int) wstr.size(),
                                         NULL, 0, NULL, NULL);
   std::string strTo(size_needed, 0);
   WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int) wstr.size(), &strTo[0],
                       size_needed, NULL, NULL);
   return strTo;
+}
+
+// Convert an UTF8 string to a wide Unicode String
+std::wstring utf8_decode(const std::string& str) {
+  if (str.empty()) return std::wstring();
+  int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int) str.size(), NULL, 0);
+  std::wstring wstrTo(size_needed, 0);
+  MultiByteToWideChar(CP_UTF8, 0, &str[0], (int) str.size(), &wstrTo[0], size_needed);
+  return wstrTo;
+}
+
+bool isMatch(const std::string& value, const std::regex& re) {
+  return std::regex_match(value, re);
 }
 
 Wmi::Wmi() : pLoc(nullptr), pSvc(nullptr) {};
@@ -101,7 +114,7 @@ HRESULT Wmi::init() {
   return S_OK;
 }
 
-HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut) {
+HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, const AdditionalFilters* filters) {
   HRESULT hres;
   IEnumWbemClassObject* pEnumerator = nullptr;
   // Make the WMI query
@@ -119,48 +132,81 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut) 
   ULONG uReturn = 0;
 
   while (pEnumerator) {
-    hres = pEnumerator->Next(WBEM_INFINITE, 1,&pclsObj, &uReturn);
+    hres = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+
     if (0==uReturn) {
       break;
     }
 
+    VARIANT vtProp;
+    if (filters) {
+      for (auto filter: *filters) {
+        hres = pclsObj->Get(utf8_decode(filter.first).c_str(), 0, &vtProp, nullptr, 0);
+        if (FAILED(hres)) continue;
+        auto val = utf8_encode(vtProp.bstrVal);
+        if (!std::regex_match(val, filter.second))
+          goto _NextElement;
+      }
+    }
+
     SAFEARRAY* sfArray;
     LONG lstart, lend;
-    VARIANT vtProp;
+
 
     //Get Wmi objects names
-    pclsObj->GetNames(0, WBEM_FLAG_ALWAYS, 0, &sfArray);
+    hres = pclsObj->GetNames(0, WBEM_FLAG_ALWAYS, 0, &sfArray);
+    if (FAILED(hres))
+      continue;
+
     // Find safe array boundaries
     SafeArrayGetLBound(sfArray, 1, &lstart);
     SafeArrayGetUBound(sfArray, 1, &lend);
 
     BSTR* pbstr;
-    SafeArrayAccessData(sfArray, (void HUGEP**) &pbstr);
+    hres = SafeArrayAccessData(sfArray, (void HUGEP**) &pbstr);
     int nIdx = 0;
 
-    if (SUCCEEDED(hres)) {
+    if (FAILED(hres)) continue;
+
+    _QueryElement:
+    {
       CIMTYPE pType;
       QueryObj item;
       for (nIdx = lstart; nIdx < lend; nIdx++) {
-        pclsObj->Get(pbstr[nIdx], 0, &vtProp, &pType, 0);
+        hres = pclsObj->Get(pbstr[nIdx], 0, &vtProp, &pType, 0);
 
-        if (vtProp.vt==VT_NULL)  continue;
+        if (FAILED(hres)) continue;
 
-        if (pType==CIM_STRING && pType!=CIM_EMPTY && pType!=CIM_ILLEGAL)
+        if (vtProp.vt==VT_NULL) continue;
+
+        if ((pType==CIM_STRING || pType==CIM_REFERENCE) && pType!=CIM_EMPTY && pType!=CIM_ILLEGAL)
           item.emplace(utf8_encode(pbstr[nIdx]), utf8_encode(vtProp.bstrVal));
 
         VariantClear(&vtProp);
       }
+
+      hres = pclsObj->Get(L"Dependent", 0, &vtProp, &pType, 0);
+      if (pType!=CIM_EMPTY && pType!=CIM_ILLEGAL && SUCCEEDED(hres))
+        item.emplace(utf8_encode(pbstr[nIdx]), utf8_encode(vtProp.bstrVal));
+
       // Push item to vector
       queryVectorOut.emplace_back(item);
 
+      // Empty sfArray
       SafeArrayUnaccessData(sfArray);
+
+      SafeArrayDestroy(sfArray);  // Delete sfArray
+      sfArray = nullptr;          // Avoid dangling pointers
     }
-    VariantClear(&vtProp);
-    pclsObj->Release();
+    _NextElement:
+    VariantClear(&vtProp);      // Clear vtProp
+    pclsObj->Release();         // Release pclsObj
   }
 
   pEnumerator->Release();
+  pEnumerator = nullptr;
 
   return S_OK;
 }
+
+#pragma clang diagnostic pop

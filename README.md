@@ -1,6 +1,6 @@
 Simple WMI wrapper for c++
 
-Simple use:
+Use:
 ```cpp
   HRESULT hres;
   Wmi wmi;

@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <memory>
+#include <regex>
 
 #include <comdef.h>
 #include <Wbemidl.h>
@@ -11,12 +11,10 @@
 
 #pragma comment(lib, "wbemuuid.lib")
 
-/* TODO: add parameters on init to enable remote connections
- * */
-
 
 typedef std::map<std::string, std::string> QueryObj;
-
+typedef std::map<std::string, std::regex> AdditionalFilters;
+typedef std::pair<std::string, std::regex> AdditionalFilter;
 
 class Wmi {
 /*Wmi Base class*/
@@ -25,7 +23,9 @@ class Wmi {
   ~Wmi();
 
   HRESULT init();   // Initialises connection to WMI host
-  HRESULT query(std::string queryStr, std::vector<QueryObj>& queryVectorOut);
+  HRESULT query(std::string queryStr,
+                std::vector<QueryObj>& queryVectorOut,
+                const AdditionalFilters* filters = nullptr);
 
  private:
   IWbemLocator *pLoc = nullptr;

@@ -1,6 +1,6 @@
 #include "library.h"
 
-#include <iostream>
+
 
 // Taken from https://stackoverflow.com/questions/215963/
 // Convert a wide Unicode string to an UTF8 string
@@ -8,17 +8,17 @@ std::string utf8_encode(const std::wstring& wstr) {
   if (wstr.empty()) return std::string();
 
   int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int) wstr.size(),
-                                        NULL, 0, NULL, NULL);
+                                        nullptr, 0, nullptr, nullptr);
   std::string strTo(size_needed, 0);
   WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int) wstr.size(), &strTo[0],
-                      size_needed, NULL, NULL);
+                      size_needed, nullptr, nullptr);
   return strTo;
 }
 
 // Convert an UTF8 string to a wide Unicode String
 std::wstring utf8_decode(const std::string& str) {
   if (str.empty()) return std::wstring();
-  int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int) str.size(), NULL, 0);
+  int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int) str.size(), nullptr, 0);
   std::wstring wstrTo(size_needed, 0);
   MultiByteToWideChar(CP_UTF8, 0, &str[0], (int) str.size(), &wstrTo[0], size_needed);
   return wstrTo;
@@ -47,15 +47,15 @@ HRESULT Wmi::init() {
 
   // Set general COM security levels --------------------------
   hres = CoInitializeSecurity(
-      NULL,
+      nullptr,
       -1,                          // COM authentication
-      NULL,                        // Authentication services
-      NULL,                        // Reserved
+      nullptr,                     // Authentication services
+      nullptr,                     // Reserved
       RPC_C_AUTHN_LEVEL_DEFAULT,   // Default authentication
       RPC_C_IMP_LEVEL_IMPERSONATE, // Default Impersonation
-      NULL,                        // Authentication info
+      nullptr,                     // Authentication info
       EOAC_NONE,                   // Additional capabilities
-      NULL                         // Reserved
+      nullptr                      // Reserved
   );
 
   if (FAILED(hres)) {
@@ -77,10 +77,10 @@ HRESULT Wmi::init() {
 
   hres = pLoc->ConnectServer(
       _bstr_t(L"ROOT\\CIMV2"), // Object path of WMI namespace
-      NULL,                    // User name. NULL = current user
-      NULL,                    // User password. NULL = current
+      nullptr,                    // User name. NULL = current user
+      nullptr,                    // User password. NULL = current
       nullptr,                 // Locale. NULL indicates current
-      NULL,                    // Security flags.
+      0,                    // Security flags.
       nullptr,                 // Authority (for example, Kerberos)
       nullptr,                 // Context object
       &pSvc                    // pointer to IWbemServices proxy
@@ -97,10 +97,10 @@ HRESULT Wmi::init() {
       pSvc,                        // Indicates the proxy to set
       RPC_C_AUTHN_WINNT,           // RPC_C_AUTHN_xxx
       RPC_C_AUTHZ_NONE,            // RPC_C_AUTHZ_xxx
-      NULL,                        // Server principal name
+      nullptr,                        // Server principal name
       RPC_C_AUTHN_LEVEL_CALL,      // RPC_C_AUTHN_LEVEL_xxx
       RPC_C_IMP_LEVEL_IMPERSONATE, // RPC_C_IMP_LEVEL_xxx
-      NULL,                        // client identity
+      nullptr,                        // client identity
       EOAC_NONE                    // proxy capabilities
   );
 
@@ -141,7 +141,7 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, 
     VARIANT vtProp;
     if (filters) {
       for (auto filter: *filters) {
-        hres = pclsObj->Get(utf8_decode(filter.first).c_str(), 0, &vtProp, nullptr, 0);
+        hres = pclsObj->Get(utf8_decode(filter.first).c_str(), 0, &vtProp, nullptr, nullptr);
         if (FAILED(hres)) continue;
         auto val = utf8_encode(vtProp.bstrVal);
         if (!std::regex_match(val, filter.second))
@@ -154,7 +154,7 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, 
 
 
     //Get Wmi objects names
-    hres = pclsObj->GetNames(0, WBEM_FLAG_ALWAYS, 0, &sfArray);
+    hres = pclsObj->GetNames(0, WBEM_FLAG_ALWAYS, nullptr, &sfArray);
     if (FAILED(hres))
       continue;
 
@@ -185,7 +185,7 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, 
         VariantClear(&vtProp);
       }
 
-      hres = pclsObj->Get(L"Dependent", 0, &vtProp, &pType, 0);
+      hres = pclsObj->Get(L"Dependent", 0, &vtProp, &pType, nullptr);
       if (pType!=CIM_EMPTY && pType!=CIM_ILLEGAL && SUCCEEDED(hres))
         item.emplace(utf8_encode(pbstr[nIdx]), utf8_encode(vtProp.bstrVal));
 
@@ -208,5 +208,3 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, 
 
   return S_OK;
 }
-
-#pragma clang diagnostic pop

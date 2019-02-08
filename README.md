@@ -7,7 +7,7 @@ Use:
   wmi.init();
 
   std::vector<QueryObj> q_res;
-  hres = wmi.query("SELECT * FROM Win32_PnPAllocatedResource WHERE Dependent.description LIKE '\%'", q_res);
+  hres = wmi.query("SELECT * FROM Win32_PnPAllocatedResource '\%'", q_res);
   
   if (hres){
     std::cout << "query error:\t" << hres << std::endl;

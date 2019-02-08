@@ -168,7 +168,6 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, 
 
     if (FAILED(hres)) continue;
 
-    _QueryElement:
     {
       CIMTYPE pType;
       QueryObj item;

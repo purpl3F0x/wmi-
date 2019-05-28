@@ -1,10 +1,19 @@
+/**
+ * @file library.cpp
+ * @author Stavros Avramidis
+ * @date 5/28/2019
+ * @brief definitions of library.h
+ */
+
+
 #include "library.h"
 
-
-
-// Taken from https://stackoverflow.com/questions/215963/
-// Convert a wide Unicode string to an UTF8 string
-std::string utf8_encode(const std::wstring& wstr) {
+/**
+ * @details Convert a wide Unicode String to a UTF8 sring
+ * @param wstr
+ * @return
+ */
+std::string utf8_encode(const std::wstring &wstr) {
   if (wstr.empty()) return std::string();
 
   int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int) wstr.size(),
@@ -15,17 +24,17 @@ std::string utf8_encode(const std::wstring& wstr) {
   return strTo;
 }
 
-// Convert an UTF8 string to a wide Unicode String
-std::wstring utf8_decode(const std::string& str) {
+/**
+ * @details Convert an UTF8 string to a wide Unicode String
+ * @param str string to be converted
+ * @return a wstring
+ */
+std::wstring utf8_decode(const std::string &str) {
   if (str.empty()) return std::wstring();
   int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int) str.size(), nullptr, 0);
   std::wstring wstrTo(size_needed, 0);
   MultiByteToWideChar(CP_UTF8, 0, &str[0], (int) str.size(), &wstrTo[0], size_needed);
   return wstrTo;
-}
-
-bool isMatch(const std::string& value, const std::regex& re) {
-  return std::regex_match(value, re);
 }
 
 Wmi::Wmi() : pLoc(nullptr), pSvc(nullptr) {};
@@ -68,7 +77,7 @@ HRESULT Wmi::init() {
       CLSID_WbemLocator,
       nullptr,
       CLSCTX_INPROC_SERVER,
-      IID_IWbemLocator, (LPVOID*) &pLoc);
+      IID_IWbemLocator, (LPVOID *) &pLoc);
 
   if (FAILED(hres)) {
     CoUninitialize();
@@ -114,9 +123,11 @@ HRESULT Wmi::init() {
   return S_OK;
 }
 
-HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, const AdditionalFilters* filters) {
+HRESULT Wmi::query(const std::string queryStr,
+                   std::vector<QueryObj> &queryVectorOut,
+                   const AdditionalFilters *filters) {
   HRESULT hres;
-  IEnumWbemClassObject* pEnumerator = nullptr;
+  IEnumWbemClassObject *pEnumerator = nullptr;
   // Make the WMI query
   hres = pSvc->ExecQuery(
       bstr_t("WQL"),
@@ -128,7 +139,7 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, 
   if (FAILED(hres))
     return hres;
 
-  IWbemClassObject* pclsObj = nullptr;
+  IWbemClassObject *pclsObj = nullptr;
   ULONG uReturn = 0;
 
   while (pEnumerator) {
@@ -149,7 +160,7 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, 
       }
     }
 
-    SAFEARRAY* sfArray;
+    SAFEARRAY *sfArray;
     LONG lstart, lend;
 
 
@@ -162,8 +173,9 @@ HRESULT Wmi::query(std::string queryStr, std::vector<QueryObj>& queryVectorOut, 
     SafeArrayGetLBound(sfArray, 1, &lstart);
     SafeArrayGetUBound(sfArray, 1, &lend);
 
-    BSTR* pbstr;
-    hres = SafeArrayAccessData(sfArray, (void HUGEP**) &pbstr);
+    BSTR *pbstr;
+    hres = SafeArrayAccessData(sfArray, (void
+    HUGEP **) &pbstr);
     int nIdx = 0;
 
     if (FAILED(hres)) continue;

@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(wmi)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+#set(CMAKE_CXX_FLAGS "/Wall /O2")
+
 EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCHITECTURE)
 
 
@@ -23,5 +25,4 @@ endif ()
 
 add_library(wmi library.cpp library.h)
 
-
-add_executable(wmi-test main.cpp)
+add_executable(wmi-test main.cpp library.cpp)

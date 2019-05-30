@@ -20,6 +20,8 @@
 #include <Wbemidl.h>
 #include <Windows.h>
 
+#define WMI_WAIT_TIME 2000 /// Max time to wait for next object in when enumerating next object in wmi query in milliseconds
+
 #pragma comment(lib, "wbemuuid.lib")
 
 typedef std::map<std::string, std::string> QueryObj;
@@ -46,7 +48,7 @@ class Wmi {
    * @param filters optional pair of filters to be applied to WMi yields
    * @return HRESULT if any problem occurs else H
    */
-  HRESULT query(const std::string queryStr,
+  HRESULT query(const std::string &queryStr,
                 std::vector<QueryObj> &queryVectorOut,
                 const AdditionalFilters *filters = nullptr);
 
@@ -54,3 +56,6 @@ class Wmi {
   IWbemLocator *pLoc = nullptr;
   IWbemServices *pSvc = nullptr;
 };
+
+
+

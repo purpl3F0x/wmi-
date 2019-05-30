@@ -15,7 +15,8 @@
 
 #include "library.h"
 
-#pragma comment(lib, "wmi.lib")
+//#pragma comment(lib, "wmi.lib")
+
 
 int main() {
   Wmi wmi;
@@ -43,6 +44,7 @@ int main() {
     std::cout << "Description\t:\t" << res["Description"] << '\n';
   }
 
+
   // Get SMBUS info
   q_res.clear();
   std::string devID;
@@ -60,9 +62,10 @@ int main() {
   std::string rgx = ".+" + devID.substr(4, 33) + ".+";
 
   q_res.clear();
+
   AdditionalFilters filters;
-  filters.emplace("Dependent", rgx);
-  filters.emplace("Antecedent", ".*Port.*");
+  filters.emplace("Dependent", (std::regex) rgx);
+  filters.emplace("Antecedent", (std::regex) ".*Port.*");
   wmi.query("SELECT * FROM Win32_PnPAllocatedResource", q_res, &filters);
   if (!q_res.empty()) {
     auto res = q_res[0];
@@ -73,11 +76,5 @@ int main() {
     }
   }
 
-  std::vector<std::string> stacie = {
-      "Stacy\'s mom has got it goin\' on",
-      "She\'s all I want and I \'ve waited for so long",
-      "Stacy can't you see you're just not the girl for me",
-      "I know it might be wrong"
-  };
 
 }

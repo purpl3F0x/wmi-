@@ -49,7 +49,7 @@ HRESULT Wmi::init() {
   HRESULT hres;
 
   // Initialize COM. ------------------------------------------
-  hres = CoInitializeEx(0, COINIT_MULTITHREADED);
+  hres = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
   if (FAILED(hres)) {
     return hres;
   }
@@ -123,11 +123,13 @@ HRESULT Wmi::init() {
   return S_OK;
 }
 
-HRESULT Wmi::query(const std::string queryStr,
+HRESULT Wmi::query(const std::string &queryStr,
                    std::vector<QueryObj> &queryVectorOut,
                    const AdditionalFilters *filters) {
   HRESULT hres;
+
   IEnumWbemClassObject *pEnumerator = nullptr;
+
   // Make the WMI query
   hres = pSvc->ExecQuery(
       bstr_t("WQL"),
@@ -143,20 +145,21 @@ HRESULT Wmi::query(const std::string queryStr,
   ULONG uReturn = 0;
 
   while (pEnumerator) {
-    hres = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+    pEnumerator->Next(WMI_WAIT_TIME, 1, &pclsObj, &uReturn);
 
-    if (0==uReturn) {
+    if (0==uReturn)
       break;
-    }
 
     VARIANT vtProp;
+
     if (filters) {
-      for (auto filter: *filters) {
+      for (auto &filter: *filters) {
         hres = pclsObj->Get(utf8_decode(filter.first).c_str(), 0, &vtProp, nullptr, nullptr);
         if (FAILED(hres)) continue;
         auto val = utf8_encode(vtProp.bstrVal);
-        if (!std::regex_match(val, filter.second))
+        if (!std::regex_match(val, filter.second)) {
           goto _NextElement;
+        }
       }
     }
 
@@ -165,7 +168,7 @@ HRESULT Wmi::query(const std::string queryStr,
 
 
     //Get Wmi objects names
-    hres = pclsObj->GetNames(0, WBEM_FLAG_ALWAYS, nullptr, &sfArray);
+    hres = pclsObj->GetNames(nullptr, WBEM_FLAG_ALWAYS, nullptr, &sfArray);
     if (FAILED(hres))
       continue;
 
@@ -174,13 +177,12 @@ HRESULT Wmi::query(const std::string queryStr,
     SafeArrayGetUBound(sfArray, 1, &lend);
 
     BSTR *pbstr;
-    hres = SafeArrayAccessData(sfArray, (void
-    HUGEP **) &pbstr);
-    int nIdx = 0;
+    hres = SafeArrayAccessData(sfArray, (void HUGEP **) &pbstr);
+    LONG nIdx = 0;
 
     if (FAILED(hres)) continue;
 
-    {
+    else {
       CIMTYPE pType;
       QueryObj item;
       for (nIdx = lstart; nIdx < lend; nIdx++) {
@@ -209,6 +211,7 @@ HRESULT Wmi::query(const std::string queryStr,
       SafeArrayDestroy(sfArray);  // Delete sfArray
       sfArray = nullptr;          // Avoid dangling pointers
     }
+
     _NextElement:
     VariantClear(&vtProp);      // Clear vtProp
     pclsObj->Release();         // Release pclsObj
